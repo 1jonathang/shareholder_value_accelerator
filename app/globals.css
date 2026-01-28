@@ -1,26 +1,125 @@
-@import "tailwindcss";
+@import 'tailwindcss';
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --font-inter: 'Inter', system-ui, -apple-system, sans-serif;
+  
+  /* Spreadsheet colors */
+  --grid-line: #e2e8f0;
+  --header-bg: #f8fafc;
+  --header-border: #cbd5e1;
+  --selection-bg: rgba(59, 130, 246, 0.1);
+  --selection-border: #3b82f6;
+  --cell-text: #1e293b;
+  --header-text: #64748b;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+* {
+  box-sizing: border-box;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+html, body {
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 5px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* Selection highlight */
+::selection {
+  background: rgba(59, 130, 246, 0.3);
+}
+
+/* Canvas focus outline */
+canvas:focus {
+  outline: none;
+}
+
+/* Prevent text selection on canvas container */
+.sheet-container {
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* Formula bar input */
+.formula-input:focus {
+  background: white;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+}
+
+/* Keyboard hints */
+kbd {
+  font-family: var(--font-inter);
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+/* Smooth animations */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideUp {
+  from { 
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to { 
+    opacity: 1;
+    transform: translateY(0);
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.2s ease-out;
+}
+
+.animate-slide-up {
+  animation: slideUp 0.3s ease-out;
+}
+
+.animate-pulse {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* Agent panel transitions */
+.agent-panel-enter {
+  transform: translateX(100%);
+}
+
+.agent-panel-enter-active {
+  transform: translateX(0);
+  transition: transform 0.3s ease-out;
+}
+
+.agent-panel-exit {
+  transform: translateX(0);
+}
+
+.agent-panel-exit-active {
+  transform: translateX(100%);
+  transition: transform 0.3s ease-in;
 }
