@@ -5,6 +5,7 @@
 ## Overview
 
 Ramp Sheets is a next-generation spreadsheet application that combines the performance of native applications with the intelligence of modern AI. Built on a Rust/WASM engine for blazing-fast calculations and WebGL rendering, it uses Grok 4.1 as an agentic AI partner for financial analysis and modeling.
+Got free credits for Grok, can easily switch out for other models.
 
 ## Key Features
 
