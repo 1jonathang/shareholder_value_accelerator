@@ -1,6 +1,6 @@
 /**
- * Types for Grok AI Agent integration
- * Following the xAI SDK patterns for tool use
+ * Types for Claude AI Agent integration
+ * Using the Anthropic Messages API
  */
 
 import { z } from 'zod';
@@ -79,14 +79,11 @@ export const AgentPlanSchema = z.object({
 
 export type AgentPlan = z.infer<typeof AgentPlanSchema>;
 
-// Tool definitions for Grok
-export interface GrokTool {
-  type: 'function';
-  function: {
-    name: string;
-    description: string;
-    parameters: Record<string, unknown>;
-  };
+// Tool definitions for the agent
+export interface AgentTool {
+  name: string;
+  description: string;
+  input_schema: Record<string, unknown>;
 }
 
 // Web search result type
@@ -135,7 +132,7 @@ export interface AgentResponse {
 }
 
 // Streaming event types
-export type AgentStreamEvent = 
+export type AgentStreamEvent =
   | { type: 'plan_start'; plan: Omit<AgentPlan, 'steps'> & { steps: [] } }
   | { type: 'step_added'; step: AgentPlanStep }
   | { type: 'step_update'; stepId: string; status: AgentPlanStep['status']; result?: string }
@@ -143,4 +140,3 @@ export type AgentStreamEvent =
   | { type: 'reasoning'; text: string }
   | { type: 'error'; message: string }
   | { type: 'complete'; plan: AgentPlan };
-

@@ -63,7 +63,7 @@ export function CommandPalette({ isOpen, onClose, onSubmit }: CommandPaletteProp
               type="text"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Ask Grok to analyze, model, or edit your spreadsheet..."
+              placeholder="Ask Claude to analyze, model, or edit your spreadsheet..."
               className="flex-1 text-lg bg-transparent outline-none placeholder:text-slate-400"
             />
             <kbd className="hidden sm:inline-flex items-center gap-1 px-2 py-1 text-xs font-medium text-slate-500 bg-slate-100 rounded">

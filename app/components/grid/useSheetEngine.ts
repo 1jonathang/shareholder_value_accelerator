@@ -2,6 +2,9 @@
 
 import { useEffect, useState, useCallback } from 'react';
 
+const DEFAULT_COL_WIDTH = 100;
+const DEFAULT_ROW_HEIGHT = 24;
+
 // WASM engine interface (will be loaded dynamically)
 interface SheetEngine {
   set_cell(row: number, col: number, value: string): unknown;
@@ -53,7 +56,7 @@ async function loadWasmModule(): Promise<unknown> {
 
 // Fallback JavaScript implementation when WASM is not available
 class FallbackEngine implements SheetEngine {
-  private cells: Map<string, { value: string; formula?: string }> = new Map();
+  private cells: Map<string, { value: string; formula?: string; format?: any }> = new Map();
   private viewportStart = { row: 0, col: 0 };
   private viewportSize = { rows: 50, cols: 20 };
 
@@ -213,7 +216,7 @@ class FallbackEngine implements SheetEngine {
   }
 
   export_json(): string {
-    const data: Record<string, { value: string; formula?: string }> = {};
+    const data: Record<string, { value: string; formula?: string; format?: any }> = {};
     for (const [key, cell] of this.cells) {
       data[key] = cell;
     }
@@ -221,7 +224,7 @@ class FallbackEngine implements SheetEngine {
   }
 
   import_json(json: string): void {
-    const data = JSON.parse(json) as Record<string, { value: string; formula?: string }>;
+    const data = JSON.parse(json) as Record<string, { value: string; formula?: string; format?: any }>;
     this.cells.clear();
     for (const [key, cell] of Object.entries(data)) {
       this.cells.set(key, cell);

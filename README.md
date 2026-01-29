@@ -4,14 +4,13 @@
 
 ## Overview
 
-Ramp Sheets is a next-generation spreadsheet application that combines the performance of native applications with the intelligence of modern AI. Built on a Rust/WASM engine for blazing-fast calculations and WebGL rendering, it uses Grok 4.1 as an agentic AI partner for financial analysis and modeling.
-Got free credits for Grok, can easily switch out for other models.
+Ramp Sheets is a next-generation spreadsheet application that combines the performance of native applications with the intelligence of modern AI. Built on a Rust/WASM engine for blazing-fast calculations and WebGL rendering, it uses Claude as an agentic AI partner for financial analysis and modeling.
 
 ## Key Features
 
 - **High-Performance Grid**: Canvas-based rendering with WebGL acceleration, supporting 1M+ cells at 60fps
 - **Rust/WASM Engine**: Formula evaluation, dependency tracking, and cell storage in Rust for near-native performance
-- **AI-Powered Agent**: Grok 4.1 acts as an intelligent editor with visible planning, not just a chatbot
+- **AI-Powered Agent**: Claude acts as an intelligent editor with visible planning, not just a chatbot
 - **Finance-First**: Built-in financial functions (IRR, NPV, XIRR, cohort analysis) with Python validation
 - **Real-Time Collaboration**: Supabase-powered sync with CRDT conflict resolution
 - **Excel Compatible**: Full import/export support for .xlsx files
@@ -22,7 +21,7 @@ Got free credits for Grok, can easily switch out for other models.
 |-------|------------|
 | Framework | Next.js 16.1.1 (App Router, Server Actions) |
 | Engine | Rust + WASM + WebGL/WebGPU |
-| AI Brain | Grok 4.1 Fast (xAI SDK) |
+| AI Brain | Claude (Anthropic Messages API) |
 | Database | Supabase (Postgres + Realtime) |
 | Testing | Vitest + Playwright |
 
@@ -33,7 +32,7 @@ Got free credits for Grok, can easily switch out for other models.
 - Node.js 20+
 - Rust (stable) with `wasm-pack`
 - Supabase account (or local instance)
-- xAI API key for Grok
+- Anthropic API key for Claude
 
 ### Installation
 
@@ -62,8 +61,8 @@ npm run dev
 ### Environment Variables
 
 ```env
-# xAI Grok API
-XAI_API_KEY=your_xai_api_key
+# Anthropic Claude API
+ANTHROPIC_API_KEY=your_anthropic_api_key
 
 # Supabase
 NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
@@ -96,7 +95,7 @@ SUPABASE_SERVICE_ROLE_KEY=your_service_key
 │                    Server Actions                             │
 │  ┌──────────────┐  ┌──────────────┐  ┌──────────────────┐   │
 │  │ Agent API    │  │ web_search   │  │ code_execution   │   │
-│  │ (Grok 4.1)   │  │ (xAI Tool)   │  │ (Python)         │   │
+│  │ (Claude)     │  │ (Search)     │  │ (Python)         │   │
 │  └──────────────┘  └──────────────┘  └──────────────────┘   │
 ├──────────────────────────────────────────────────────────────┤
 │                      Supabase                                 │
@@ -112,14 +111,14 @@ SUPABASE_SERVICE_ROLE_KEY=your_service_key
 ```
 sheets/
 ├── app/                    # Next.js App Router
-│   ├── api/agent/         # Grok agent API routes
+│   ├── api/agent/         # Claude agent API routes
 │   ├── components/        # React components
 │   │   └── grid/          # Canvas grid components
 │   ├── page.tsx           # Main spreadsheet page
 │   └── layout.tsx         # Root layout
 ├── lib/                   # Shared libraries
 │   ├── finance/           # Financial functions (TS)
-│   ├── grok/              # Grok AI client
+│   ├── claude/            # Claude AI client
 │   ├── supabase/          # Supabase client & types
 │   └── wasm/              # Built WASM output
 ├── rust-engine/           # Rust spreadsheet engine
@@ -151,7 +150,7 @@ sheets/
 
 The AI agent follows a planning-first approach:
 
-1. **Planning Phase**: Grok creates a multi-step plan before execution
+1. **Planning Phase**: Claude creates a multi-step plan before execution
 2. **Visible Reasoning**: Each step shows the AI's reasoning
 3. **Tool Use**: 
    - `web_search` for real-time market data

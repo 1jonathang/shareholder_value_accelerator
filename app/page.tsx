@@ -3,15 +3,16 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { SheetCanvas, type Selection } from './components/grid/SheetCanvas';
 import { CommandPalette } from './components/CommandPalette';
-import { AgentPanel } from './components/AgentPanel';
+import { ChatPanel, type ChatMessage } from './components/ChatPanel';
 import { FormulaBar } from './components/FormulaBar';
 import { Toolbar, type FormatAction } from './components/Toolbar';
-import type { AgentPlan, SheetPatch } from '@/lib/grok/types';
+import type { AgentPlan, SheetPatch } from '@/lib/claude/types';
 import { useSheetEngine } from './components/grid/useSheetEngine';
 
 export default function Home() {
   const [isCommandOpen, setIsCommandOpen] = useState(false);
-  const [agentPlan, setAgentPlan] = useState<AgentPlan | null>(null);
+  const [isChatOpen, setIsChatOpen] = useState(true);
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [isAgentExecuting, setIsAgentExecuting] = useState(false);
   const [selection, setSelection] = useState<Selection | null>(null);
   const [cellValue, setCellValue] = useState('');
@@ -19,7 +20,7 @@ export default function Home() {
   const [history, setHistory] = useState<{ past: unknown[]; future: unknown[] }>({ past: [], future: [] });
   const engineRef = useRef<any>(null);
   const triggerRenderRef = useRef<(() => void) | null>(null);
-  
+
   // Stable callback for engine ready
   const handleEngineReady = useCallback((engine: any, triggerRender: () => void) => {
     console.log('page.tsx: Engine ready callback called', { engine, hasApplyFormat: engine?.apply_format });
@@ -53,11 +54,55 @@ export default function Home() {
     console.log('Cell edit:', row, col, value);
   }, []);
 
+  const handleApplyPatch = useCallback((patch: SheetPatch) => {
+    const engine = engineRef.current;
+    if (!engine) {
+      console.warn('Cannot apply patch: engine not ready');
+      return;
+    }
+
+    switch (patch.type) {
+      case 'UPDATE_CELLS': {
+        const { updates } = patch.payload;
+        for (const update of updates) {
+          const value = update.formula || (update.value !== undefined ? String(update.value) : '');
+          engine.set_cell(update.row, update.col, value);
+        }
+        break;
+      }
+      case 'FORMAT_RANGE': {
+        const { range, format } = patch.payload;
+        const engineFormat: any = {};
+        if (format.fontBold !== undefined) engineFormat.font_bold = format.fontBold;
+        if (format.fontItalic !== undefined) engineFormat.font_italic = format.fontItalic;
+        if (format.fontSize !== undefined) engineFormat.font_size = format.fontSize;
+        if (format.fontColor !== undefined) engineFormat.font_color = format.fontColor;
+        if (format.bgColor !== undefined) engineFormat.bg_color = format.bgColor;
+        if (format.alignH !== undefined) engineFormat.align_h = format.alignH;
+        if (format.numberFormat !== undefined) engineFormat.number_format = format.numberFormat;
+        engine.apply_format(range.startRow, range.startCol, range.endRow, range.endCol, engineFormat);
+        break;
+      }
+      case 'CREATE_TAB':
+        // TODO: Tab creation not yet supported by engine
+        break;
+    }
+
+    triggerRenderRef.current?.();
+  }, []);
+
   const handleCommandSubmit = useCallback(async (query: string) => {
     setIsCommandOpen(false);
+    setIsChatOpen(true);
     setIsAgentExecuting(true);
 
+    // Add user message to chat
+    setChatMessages(prev => [...prev, { type: 'user', text: query, timestamp: new Date().toISOString() }]);
+
     try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 120000);
+
       const response = await fetch('/api/agent', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -74,43 +119,36 @@ export default function Home() {
             } : undefined,
           },
         }),
+        signal: controller.signal,
       });
 
+      clearTimeout(timeout);
+
       if (!response.ok) {
-        throw new Error('Agent request failed');
+        const body = await response.json().catch(() => null);
+        throw new Error(body?.message || body?.error || `Agent request failed (${response.status})`);
       }
 
       const data = await response.json();
-      setAgentPlan(data.plan);
 
-      // Apply patches automatically
-      for (const patch of data.patches) {
-        // TODO: Apply patch to engine
-        console.log('Applying patch:', patch);
+      // Apply patches to the engine
+      if (data.patches && Array.isArray(data.patches)) {
+        for (const patch of data.patches) {
+          handleApplyPatch(patch);
+        }
       }
+
+      // Add plan message to chat
+      setChatMessages(prev => [...prev, { type: 'plan', plan: data.plan, patches: data.patches || [] }]);
     } catch (error) {
-      console.error('Agent error:', error);
-      setAgentPlan({
-        id: 'error',
-        userQuery: query,
-        steps: [{
-          id: 'error',
-          description: 'Failed to execute agent request',
-          status: 'failed',
-          result: error instanceof Error ? error.message : 'Unknown error',
-        }],
-        status: 'failed',
-        createdAt: new Date().toISOString(),
-      });
+      const errorMessage = error instanceof Error
+        ? (error.name === 'AbortError' ? 'Request timed out' : error.message)
+        : 'Unknown error';
+      setChatMessages(prev => [...prev, { type: 'error', text: errorMessage, timestamp: new Date().toISOString() }]);
     } finally {
       setIsAgentExecuting(false);
     }
-  }, [selection]);
-
-  const handleApplyPatch = useCallback((patch: SheetPatch) => {
-    // TODO: Apply patch to engine
-    console.log('Manual apply patch:', patch);
-  }, []);
+  }, [selection, handleApplyPatch]);
 
   const handleFormulaChange = useCallback((value: string) => {
     setCellValue(value);
@@ -129,12 +167,12 @@ export default function Home() {
 
   const handleFormat = useCallback((action: FormatAction) => {
     console.log('handleFormat called:', { action, selection, engine: engineRef.current, triggerRender: triggerRenderRef.current });
-    
+
     if (!selection) {
       console.warn('Cannot apply format: no selection');
       return;
     }
-    
+
     if (!engineRef.current) {
       console.warn('Cannot apply format: engine not ready. Waiting for engine...');
       // Try to wait a bit for the engine to be ready
@@ -150,11 +188,11 @@ export default function Home() {
     }
 
     const engine = engineRef.current as any;
-    
+
     // For toggle formats (bold, italic, underline), check current state
     let shouldToggle = false;
     let currentValue: boolean | undefined = undefined;
-    
+
     if (action.type === 'bold' || action.type === 'italic' || action.type === 'underline') {
       // Check the format of the first selected cell to determine toggle state
       const firstCell = engine.get_cell?.(selection.startRow, selection.startCol);
@@ -171,10 +209,10 @@ export default function Home() {
         shouldToggle = currentValue === true;
       }
     }
-    
+
     // Convert FormatAction to CellFormat
     const format: any = {};
-    
+
     switch (action.type) {
       case 'bold':
         format.font_bold = shouldToggle ? false : true;
@@ -256,19 +294,23 @@ export default function Home() {
 
         {/* AI Button */}
         <button
-          onClick={() => setIsCommandOpen(true)}
-          className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-white bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 rounded-lg transition-all shadow-sm"
+          onClick={() => setIsChatOpen(prev => !prev)}
+          className={`flex items-center gap-2 px-3 py-1.5 text-sm font-medium rounded-lg transition-all shadow-sm ${
+            isChatOpen
+              ? 'text-indigo-700 bg-indigo-100 hover:bg-indigo-200'
+              : 'text-white bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700'
+          }`}
         >
           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
           </svg>
-          Ask Grok
+          Ask Claude
           <kbd className="hidden sm:inline px-1.5 py-0.5 text-xs bg-white/20 rounded">⌘K</kbd>
         </button>
       </header>
 
       {/* Toolbar */}
-      <Toolbar 
+      <Toolbar
         onFormat={handleFormat}
         onUndo={handleUndo}
         onRedo={handleRedo}
@@ -285,15 +327,24 @@ export default function Home() {
         onFormulaSubmit={handleFormulaSubmit}
       />
 
-      {/* Main Content */}
-      <main className="flex-1 relative overflow-hidden">
-        <SheetCanvas
-          sheetId="default"
-          tabId="tab1"
-          onSelectionChange={handleSelectionChange}
-          onCellEdit={handleCellEdit}
-          onEngineReady={handleEngineReady}
-        />
+      {/* Main Content — flex row with sheet + optional chat panel */}
+      <main className="flex-1 flex overflow-hidden">
+        <div className="flex-1 relative overflow-hidden">
+          <SheetCanvas
+            sheetId="default"
+            tabId="tab1"
+            onSelectionChange={handleSelectionChange}
+            onCellEdit={handleCellEdit}
+            onEngineReady={handleEngineReady}
+          />
+        </div>
+        {isChatOpen && (
+          <ChatPanel
+            onSubmit={handleCommandSubmit}
+            messages={chatMessages}
+            isExecuting={isAgentExecuting}
+          />
+        )}
       </main>
 
       {/* Tab Bar */}
@@ -310,22 +361,12 @@ export default function Home() {
         </div>
       </footer>
 
-      {/* Command Palette */}
+      {/* Command Palette (Cmd+K shortcut) */}
       <CommandPalette
         isOpen={isCommandOpen}
         onClose={() => setIsCommandOpen(false)}
         onSubmit={handleCommandSubmit}
       />
-
-      {/* Agent Panel */}
-      {agentPlan && (
-        <AgentPanel
-          plan={agentPlan}
-          isExecuting={isAgentExecuting}
-          onApplyPatch={handleApplyPatch}
-          onClose={() => setAgentPlan(null)}
-        />
-      )}
     </div>
   );
 }

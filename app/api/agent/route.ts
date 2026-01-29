@@ -1,12 +1,12 @@
 /**
  * Agent API Route
- * Server-side endpoint for Grok AI agent interactions
+ * Server-side endpoint for Claude AI agent interactions
  * All AI requests go through the server for security
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { executeAgent, streamAgent } from '@/lib/grok';
-import type { AgentContext, AgentRequest, AgentStreamEvent } from '@/lib/grok/types';
+import { executeAgent, streamAgent } from '@/lib/claude';
+import type { AgentContext, AgentStreamEvent } from '@/lib/claude/types';
 import { z } from 'zod';
 
 // Request validation schema
@@ -146,7 +146,7 @@ function handleStreamingRequest(query: string, context: AgentContext): Response 
 export async function GET() {
   return NextResponse.json({
     status: 'ok',
-    model: 'grok-4-1-fast-reasoning',
+    model: 'claude-sonnet-4-20250514',
     tools: ['web_search', 'code_execution', 'update_cells', 'format_range', 'create_tab'],
   });
 }

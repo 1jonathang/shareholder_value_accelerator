@@ -10,8 +10,8 @@ const inter = Inter({
 
 export const metadata: Metadata = {
   title: 'Ramp Sheets - AI-Powered Spreadsheet',
-  description: 'The Cursor for Excel. High-performance, agentic spreadsheet powered by Grok AI.',
-  keywords: ['spreadsheet', 'AI', 'finance', 'Grok', 'Excel alternative'],
+  description: 'The Cursor for Excel. High-performance, agentic spreadsheet powered by Claude AI.',
+  keywords: ['spreadsheet', 'AI', 'finance', 'Claude', 'Excel alternative'],
 };
 
 export default function RootLayout({

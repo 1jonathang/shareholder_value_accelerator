@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import type { AgentPlan, AgentPlanStep, SheetPatch } from '@/lib/grok/types';
+import type { AgentPlan, AgentPlanStep, SheetPatch } from '@/lib/claude/types';
 
 interface AgentPanelProps {
   plan: AgentPlan | null;
